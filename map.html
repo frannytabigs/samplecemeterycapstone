@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Map Builder Prototype</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        display: flex;
+        height: 100vh;
+        margin: 0;
+      }
+
+      #sidebar {
+        width: 300px;
+        background: #f4f4f4;
+        padding: 20px;
+        border-right: 1px solid #ccc;
+        overflow-y: auto;
+      }
+      .area-item {
+        background: white;
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+        display: flex;
+        justify-content: space-between;
+      }
+      .delete-btn {
+        color: red;
+        cursor: pointer;
+        font-weight: bold;
+      }
+
+      #main {
+        flex: 1;
+        padding: 20px;
+        overflow: auto;
+        position: relative;
+      }
+
+      #map-container {
+        position: relative;
+        display: inline-block;
+        cursor: crosshair;
+        user-select: none;
+      }
+
+      #base-image {
+        display: block;
+        max-width: 100%;
+        -webkit-user-drag: none;
+      }
+
+      #svg-layer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+      .saved-rect {
+        fill: rgba(221, 255, 0, 0.3);
+        stroke: rgb(255, 234, 6);
+        stroke-width: 2px;
+        pointer-events: auto;
+        cursor: pointer;
+      }
+      .saved-rect:hover {
+        fill: rgba(1, 1, 1, 0.3);
+      }
+
+      #ghost-box {
+        position: absolute;
+        border: 2px dashed blue;
+        background: rgba(0, 0, 255, 0.2);
+        display: none;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="sidebar">
+      <h3>Database Records</h3>
+      <p style="font-size: 0.8em; color: #666">
+        These are the coordinates that will be saved to your SQL table.
+      </p>
+      <div id="database-list"></div>
+    </div>
+
+    <div id="main">
+      <h2>Map Builder Tool</h2>
+      <p>Click and drag on the map to define a new area.</p>
+
+      <div id="map-container">
+        <img
+          id="base-image"
+          src="http://www.digitalcemetery.info/samples/map_rexburg.png"
+          alt="Map"
+        />
+
+        <svg id="svg-layer"></svg>
+
+        <div id="ghost-box"></div>
+      </div>
+    </div>
+
+    <script>
+      // DOM Elements
+      const container = document.getElementById("map-container");
+      const ghostBox = document.getElementById("ghost-box");
+      const svgLayer = document.getElementById("svg-layer");
+      const dbList = document.getElementById("database-list");
+
+      // State Variables
+      let isDrawing = false;
+      let startX = 0;
+      let startY = 0;
+
+      // --- HELPER: Get X/Y regardless of Mouse or Touch ---
+      function getCoords(e) {
+        // If it's a touch event, use the first finger (touches[0])
+        // If it's a mouse event, use clientX/Y
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        const rect = container.getBoundingClientRect();
+        return {
+          x: clientX - rect.left,
+          y: clientY - rect.top,
+        };
+      }
+
+      // --- 1. START DRAWING (Mouse Down OR Touch Start) ---
+      function startDraw(e) {
+        // If clicking a saved box, don't draw a new one
+        if (e.target.tagName === "rect") return;
+
+        // Prevent scrolling on mobile while drawing
+        if (e.type === "touchstart") document.body.style.overflow = "hidden";
+
+        isDrawing = true;
+        const coords = getCoords(e);
+        startX = coords.x;
+        startY = coords.y;
+
+        // Reset Ghost Box
+        ghostBox.style.left = startX + "px";
+        ghostBox.style.top = startY + "px";
+        ghostBox.style.width = "0px";
+        ghostBox.style.height = "0px";
+        ghostBox.style.display = "block";
+      }
+
+      // --- 2. MOVE (Mouse Move OR Touch Move) ---
+      function moveDraw(e) {
+        if (!isDrawing) return;
+
+        // Prevent scrolling on mobile
+        e.preventDefault();
+
+        const coords = getCoords(e);
+        const currentX = coords.x;
+        const currentY = coords.y;
+
+        // Calculate math for the box
+        const width = Math.abs(currentX - startX);
+        const height = Math.abs(currentY - startY);
+        const left = Math.min(startX, currentX);
+        const top = Math.min(startY, currentY);
+
+        ghostBox.style.width = width + "px";
+        ghostBox.style.height = height + "px";
+        ghostBox.style.left = left + "px";
+        ghostBox.style.top = top + "px";
+      }
+
+      // --- 3. END (Mouse Up OR Touch End) ---
+      function endDraw(e) {
+        if (!isDrawing) return;
+        isDrawing = false;
+
+        // Re-enable scrolling
+        document.body.style.overflow = "auto";
+        ghostBox.style.display = "none";
+
+        // Get final dimensions from the ghost box style
+        const width = parseInt(ghostBox.style.width);
+        const height = parseInt(ghostBox.style.height);
+        const left = parseInt(ghostBox.style.left);
+        const top = parseInt(ghostBox.style.top);
+
+        // Ignore tiny accidental taps
+        if (width < 20 || height < 20) return;
+
+        // Slight delay to let the UI settle before prompt
+        setTimeout(() => {
+          const name = prompt("Enter Name for this Area:");
+          if (name) {
+            saveAreaToDatabase(name, left, top, width, height);
+          }
+        }, 50);
+      }
+
+      // --- ASSIGN LISTENERS (Dual Support) ---
+      // Mouse
+      container.addEventListener("mousedown", startDraw);
+      window.addEventListener("mousemove", moveDraw); // Window catches fast drags
+      window.addEventListener("mouseup", endDraw);
+
+      // Touch (Mobile/Tablet)
+      container.addEventListener("touchstart", startDraw, { passive: false });
+      container.addEventListener("touchmove", moveDraw, { passive: false });
+      container.addEventListener("touchend", endDraw);
+
+      // --- 4. SAVE FUNCTION (Same as before) ---
+      function saveAreaToDatabase(name, x, y, w, h) {
+        const newRect = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "rect",
+        );
+        newRect.setAttribute("x", x);
+        newRect.setAttribute("y", y);
+        newRect.setAttribute("width", w);
+        newRect.setAttribute("height", h);
+        newRect.setAttribute("class", "saved-rect");
+
+        // Add delete functionality
+        newRect.addEventListener("touchend", function (e) {
+          // Add touch support for delete
+          e.preventDefault(); // Stop click from firing twice
+          confirmDelete(this, name);
+        });
+        newRect.onclick = function () {
+          confirmDelete(this, name);
+        };
+
+        svgLayer.appendChild(newRect);
+
+        // Add to Sidebar
+        const item = document.createElement("div");
+        item.className = "area-item";
+        item.id = "db-item-" + name;
+        item.innerHTML = `<div><strong>${name}</strong></div>`;
+        dbList.prepend(item);
+      }
+
+      function confirmDelete(element, name) {
+        if (confirm('Delete area "' + name + '"?')) {
+          element.remove();
+          document.getElementById("db-item-" + name).remove();
+        }
+      }
+    </script>
+  </body>
+</html>

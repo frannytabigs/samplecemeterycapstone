@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Memoria Dashboard</title>
+    <style>
+      :root {
+        --bg-color: #f8fafc;
+        --sidebar-bg: #0f172a;
+        --sidebar-header: #020617;
+        --primary: #10b981;
+        --primary-hover: #059669;
+        --text-dark: #1e293b;
+        --text-muted: #64748b;
+        --card-bg: #ffffff;
+        --border-color: #e2e8f0;
+        --danger: #ef4444;
+        --warning: #f59e0b;
+        --info: #3b82f6;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+      }
+
+      body {
+        display: flex;
+        height: 100vh;
+        background-color: var(--bg-color);
+        color: var(--text-dark);
+        overflow: hidden;
+      }
+
+      .sidebar {
+        width: 260px;
+        background-color: var(--sidebar-bg);
+        color: white;
+        display: flex;
+        flex-direction: column;
+        transition: all 0.3s ease;
+      }
+      .sidebar-header {
+        height: 70px;
+        display: flex;
+        align-items: center;
+        padding: 0 24px;
+        background-color: var(--sidebar-header);
+        font-size: 1.25rem;
+        font-weight: 800;
+        letter-spacing: 1px;
+        color: var(--primary);
+      }
+      .nav-links {
+        flex: 1;
+        padding: 24px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .nav-item {
+        padding: 14px 16px;
+        text-decoration: none;
+        color: #cbd5e1;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: all 0.2s ease;
+        font-weight: 500;
+      }
+      .nav-item:hover,
+      .nav-item.active {
+        background-color: var(--primary);
+        color: white;
+      }
+      .nav-icon {
+        margin-right: 12px;
+        font-size: 1.2rem;
+      }
+
+      .badge {
+        background-color: var(--danger);
+        color: white;
+        padding: 2px 8px;
+        border-radius: 99px;
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+
+      .main-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        position: relative;
+      }
+
+      .top-header {
+        height: 70px;
+        background-color: var(--card-bg);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 32px;
+        border-bottom: 1px solid var(--border-color);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+      .search-container {
+        position: relative;
+        width: 100%;
+        max-width: 400px;
+        padding: 10px;
+      }
+      .search-bar {
+        width: 100%;
+        padding: 10px 16px 10px 36px;
+        border: 1px solid var(--border-color);
+        border-radius: 99px;
+        outline: none;
+        background-color: var(--bg-color);
+        transition: all 0.2s;
+      }
+      .search-bar:focus {
+        border-color: var(--primary);
+        background-color: var(--card-bg);
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+      }
+      .search-icon {
+        position: absolute;
+        left: 12px;
+        top: 10px;
+        opacity: 0.5;
+        padding: 10px;
+      }
+
+      .dashboard {
+        padding: 32px;
+        padding-bottom: 100px;
+      }
+      .page-title {
+        margin-bottom: 24px;
+      }
+      .page-title h1 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--text-dark);
+      }
+      .page-title p {
+        color: var(--text-muted);
+        margin-top: 4px;
+        font-size: 0.95rem;
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+        margin-bottom: 32px;
+      }
+      .card {
+        background-color: var(--card-bg);
+        border-radius: 12px;
+        padding: 24px;
+        border: 1px solid var(--border-color);
+        border-left: 5px solid var(--primary);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .card.blue {
+        border-left-color: var(--info);
+      }
+      .card.red {
+        border-left-color: var(--danger);
+      }
+      .card-info h3 {
+        font-size: 2rem;
+        margin-top: 8px;
+        font-weight: 800;
+      }
+      .card-info p {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .card-icon {
+        font-size: 2.5rem;
+        opacity: 0.2;
+      }
+
+      .content-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 24px;
+      }
+      .panel {
+        background-color: var(--card-bg);
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      }
+      .panel-header {
+        padding: 16px 24px;
+        border-bottom: 1px solid var(--border-color);
+        font-weight: 700;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .panel-action {
+        color: var(--primary);
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .panel-action:hover {
+        color: var(--primary-hover);
+      }
+
+      .map-area {
+        min-height: 350px;
+        background-color: #f1f5f9;
+        margin: 20px;
+        border: 2px dashed #cbd5e1;
+        border-radius: 8px;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: #94a3b8;
+      }
+      .map-box {
+        position: absolute;
+        border-radius: 4px;
+      }
+
+      .table-area {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .table-area th {
+        text-align: left;
+        padding: 12px 24px;
+        background-color: #f8fafc;
+        color: var(--text-muted);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        font-weight: 700;
+      }
+      .table-area td {
+        padding: 16px 24px;
+        border-bottom: 1px solid var(--border-color);
+        font-size: 0.95rem;
+      }
+
+      .status-pill {
+        padding: 6px 12px;
+        border-radius: 99px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        display: inline-block;
+        text-align: center;
+        min-width: 80px;
+      }
+      .status-red {
+        background-color: #fee2e2;
+        color: #b91c1c;
+      }
+      .status-yellow {
+        background-color: #fef3c7;
+        color: #b45309;
+      }
+
+      .mobile-header-bar {
+        display: none;
+      }
+      .mobile-bottom-nav {
+        display: none;
+      }
+
+      @media (max-width: 1024px) {
+        .content-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 768px) {
+        body {
+          flex-direction: column;
+        }
+
+        .sidebar {
+          display: none;
+        }
+
+        .mobile-header-bar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          height: 60px;
+          background-color: var(--sidebar-header);
+          color: var(--primary);
+          padding: 0 20px;
+          font-size: 1.2rem;
+          font-weight: 800;
+          letter-spacing: 1px;
+          z-index: 20;
+        }
+
+        .top-header {
+          padding: 0 20px;
+          height: 60px;
+        }
+        .dashboard {
+          padding: 20px;
+          padding-bottom: 90px;
+        }
+        .page-title h1 {
+          font-size: 1.5rem;
+        }
+
+        .stats-grid {
+          grid-template-columns: 1fr;
+          gap: 16px;
+        }
+
+        .table-area th,
+        .table-area td {
+          padding: 12px 16px;
+        }
+
+        .mobile-bottom-nav {
+          display: flex;
+          justify-content: space-around;
+          align-items: center;
+          position: fixed;
+          bottom: 0;
+          width: 100%;
+          height: 70px;
+          background-color: var(--card-bg);
+          border-top: 1px solid var(--border-color);
+          z-index: 50;
+          box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+        }
+        .mobile-nav-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          color: var(--text-muted);
+          text-decoration: none;
+          font-size: 0.7rem;
+          font-weight: 600;
+          gap: 4px;
+          position: relative;
+        }
+        .mobile-nav-item.active {
+          color: var(--primary);
+        }
+        .mobile-nav-icon {
+          font-size: 1.4rem;
+        }
+        .mobile-badge {
+          position: absolute;
+          top: -5px;
+          right: -5px;
+          background-color: var(--danger);
+          color: white;
+          font-size: 0.6rem;
+          padding: 2px 5px;
+          border-radius: 10px;
+          border: 2px solid white;
+        }
+      }
+      @media (max-width: 332px) {
+        body {
+          width: 332px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="mobile-header-bar">
+      <span>&#10022; MEMORIA</span>
+      <span style="color: white; font-size: 1.2rem">&#128100;</span>
+    </div>
+
+    <aside class="sidebar">
+      <div class="sidebar-header">MEMORIA</div>
+      <nav class="nav-links">
+        <a href="#" class="nav-item active">
+          <div><span class="nav-icon">&#128202;</span> Dashboard</div>
+        </a>
+        <a href="#" class="nav-item">
+          <div><span class="nav-icon">&#128506;</span> 2D Map</div>
+        </a>
+        <a href="#" class="nav-item">
+          <div><span class="nav-icon">&#128193;</span> Records</div>
+        </a>
+        <a href="#" class="nav-item">
+          <div><span class="nav-icon">&#9200;</span> Leases</div>
+          <span class="badge">12</span>
+        </a>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <header class="top-header">
+        <div class="search-container">
+          <span class="search-icon">&#128269;</span>
+          <input
+            type="text"
+            class="search-bar"
+            placeholder="Search blocks, deceased names..."
+          />
+        </div>
+        <div
+          style="font-size: 1.4rem; cursor: pointer; color: var(--text-muted)"
+        >
+          &#128276;
+        </div>
+      </header>
+
+      <div class="dashboard">
+        <div class="page-title">
+          <h1>Cemetery Overview</h1>
+          <p>Mandaue City Municipal Monitoring System</p>
+        </div>
+
+        <div class="stats-grid">
+          <div class="card blue">
+            <div class="card-info">
+              <p>Total Monitored Plots</p>
+              <h3>4,250</h3>
+            </div>
+            <div class="card-icon">&#128450;</div>
+          </div>
+          <div class="card">
+            <div class="card-info">
+              <p>Available Plots</p>
+              <h3>842</h3>
+            </div>
+            <div class="card-icon">&#9989;</div>
+          </div>
+          <div class="card red">
+            <div class="card-info">
+              <p>Expiring Leases</p>
+              <h3>12</h3>
+            </div>
+            <div class="card-icon">&#9888;</div>
+          </div>
+        </div>
+
+        <div class="content-grid">
+          <div class="panel">
+            <div class="panel-header">
+              <span>2D Schematic Map Preview</span>
+              <span class="panel-action">Expand Map &rarr;</span>
+            </div>
+            <div class="map-area">
+              <div style="font-size: 3rem; margin-bottom: 10px; color: #cbd5e1">
+                &#128506;
+              </div>
+              <p style="font-weight: 500">Interactive CSS/JS Map Render Area</p>
+              <p style="font-size: 0.8rem; margin-top: 5px">
+                Blocks will render dynamically here
+              </p>
+
+              <div
+                class="map-box"
+                style="
+                  top: 20px;
+                  left: 20px;
+                  width: 30%;
+                  height: 25%;
+                  background: rgba(16, 185, 129, 0.1);
+                  border: 1px solid var(--primary);
+                "
+              ></div>
+              <div
+                class="map-box"
+                style="
+                  top: 20px;
+                  right: 20px;
+                  width: 40%;
+                  height: 25%;
+                  background: rgba(239, 68, 68, 0.1);
+                  border: 1px solid var(--danger);
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  color: var(--danger);
+                  font-size: 0.75rem;
+                  font-weight: bold;
+                "
+              >
+                Occupied
+              </div>
+              <div
+                class="map-box"
+                style="
+                  bottom: 20px;
+                  left: 20px;
+                  width: 30%;
+                  height: 40%;
+                  background: rgba(16, 185, 129, 0.1);
+                  border: 1px solid var(--primary);
+                "
+              ></div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <span>Action Required</span>
+            </div>
+            <div style="overflow-x: auto">
+              <table class="table-area">
+                <thead>
+                  <tr>
+                    <th>Plot Info</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <div style="font-weight: 700; color: var(--text-dark)">
+                        Block A, Lot 14
+                      </div>
+                      <div
+                        style="
+                          color: var(--text-muted);
+                          font-size: 0.8rem;
+                          margin-top: 2px;
+                        "
+                      >
+                        Dela Cruz Family
+                      </div>
+                    </td>
+                    <td><span class="status-pill status-red">Overdue</span></td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div style="font-weight: 700; color: var(--text-dark)">
+                        Block C, Lot 02
+                      </div>
+                      <div
+                        style="
+                          color: var(--text-muted);
+                          font-size: 0.8rem;
+                          margin-top: 2px;
+                        "
+                      >
+                        Santos Family
+                      </div>
+                    </td>
+                    <td>
+                      <span class="status-pill status-yellow">Warning</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div style="font-weight: 700; color: var(--text-dark)">
+                        Block E, Lot 88
+                      </div>
+                      <div
+                        style="
+                          color: var(--text-muted);
+                          font-size: 0.8rem;
+                          margin-top: 2px;
+                        "
+                      >
+                        Reyes Family
+                      </div>
+                    </td>
+                    <td>
+                      <span class="status-pill status-yellow">Notice</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <nav class="mobile-bottom-nav">
+      <a href="#" class="mobile-nav-item active">
+        <span class="mobile-nav-icon">&#128202;</span>
+        <span>Home</span>
+      </a>
+      <a href="#" class="mobile-nav-item">
+        <span class="mobile-nav-icon">&#128506;</span>
+        <span>Map</span>
+      </a>
+      <a href="#" class="mobile-nav-item">
+        <span class="mobile-nav-icon">&#128193;</span>
+        <span>Records</span>
+      </a>
+      <a href="#" class="mobile-nav-item">
+        <span class="mobile-nav-icon">&#9200;</span>
+        <span>Leases</span>
+        <span class="mobile-badge">12</span>
+      </a>
+    </nav>
+  </body>
+</html>
